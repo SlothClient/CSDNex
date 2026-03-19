@@ -1071,19 +1071,19 @@
                 <div class="stats-grid" id="statsGrid" style="display: none;">
                     <div class="stat-card">
                         <div class="stat-value" id="statTotal">0</div>
-                        <div class="stat-label">总文章数</div>
+                        <div class="stat-label">远程文章</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-value" id="statExported">0</div>
-                        <div class="stat-label">已导出</div>
+                        <div class="stat-value" id="statNew">0</div>
+                        <div class="stat-label">新导出</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-value" id="statImages">0</div>
                         <div class="stat-label">图片下载</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-value" id="statFailed">0</div>
-                        <div class="stat-label">图片失败</div>
+                        <div class="stat-value" id="statSkipped">0</div>
+                        <div class="stat-label">已跳过</div>
                     </div>
                 </div>
             </div>
@@ -1382,9 +1382,9 @@
         function updateStats(stats) {
             document.getElementById('statsGrid').style.display = 'grid';
             document.getElementById('statTotal').textContent = stats.total || 0;
-            document.getElementById('statExported').textContent = stats.exported || 0;
+            document.getElementById('statNew').textContent = stats.exported || 0;
             document.getElementById('statImages').textContent = stats.images || 0;
-            document.getElementById('statFailed').textContent = stats.failed || 0;
+            document.getElementById('statSkipped').textContent = stats.skipped || 0;
         }
 
         // Show results

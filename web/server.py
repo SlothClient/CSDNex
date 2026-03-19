@@ -65,6 +65,19 @@ def stream_export(job_id: str, config: ExportConfig) -> Generator[str, None, Non
         }
         return status_map.get(status, status)
 
+    def load_existing_articles(output_dir: Path) -> dict:
+        """Load existing articles from previous export."""
+        existing_json = output_dir / "articles_full.json"
+        if existing_json.exists():
+            try:
+                data = json.loads(existing_json.read_text(encoding="utf-8"))
+                items = data.get("items", [])
+                # Build dict: articleId -> article data
+                return {str(item.get("articleId")): item for item in items if item.get("articleId")}
+            except Exception:
+                pass
+        return {}
+
     try:
         # Prepare output directory
         config.output_dir.mkdir(parents=True, exist_ok=True)
@@ -72,6 +85,11 @@ def stream_export(job_id: str, config: ExportConfig) -> Generator[str, None, Non
         md_dir.mkdir(parents=True, exist_ok=True)
 
         yield send_message("log", level="info", message=f"📁 输出目录: {config.output_dir}")
+
+        # Load existing articles for incremental update
+        existing_articles = load_existing_articles(config.output_dir)
+        if existing_articles:
+            yield send_message("log", level="info", message=f"📚 发现已有 {len(existing_articles)} 篇导出文章")
 
         # Setup bucket directories
         bucket_dirs = {}
@@ -127,25 +145,47 @@ def stream_export(job_id: str, config: ExportConfig) -> Generator[str, None, Non
             yield send_message("complete", data={"totalUnique": 0}, message="导出完成，共 0 篇文章")
             return
 
+        # Filter out already exported articles (incremental update)
+        new_article_ids = [aid for aid in by_id.keys() if aid not in existing_articles]
+        skipped_count = len(by_id) - len(new_article_ids)
+
+        if skipped_count > 0:
+            yield send_message("log", level="info", message=f"⏭️ 跳过已导出的 {skipped_count} 篇文章")
+
+        if len(new_article_ids) == 0:
+            yield send_message("log", level="success", message="─" * 40)
+            yield send_message("log", level="success", message="✨ 所有内容已经都拉下来啦！")
+            yield send_message("log", level="success", message="─" * 40)
+            yield send_message("complete", data={
+                "totalUnique": len(by_id),
+                "newArticles": 0,
+                "skipped": skipped_count,
+            }, message="无需更新")
+            return
+
+        yield send_message("log", level="info", message=f"🆕 需要导出 {len(new_article_ids)} 篇新文章")
         yield send_message("log", level="info", message="🚀 开始导出...")
 
-        # Process each article
+        # Process each NEW article only
         full_articles = []
         used_md_paths = set()
         image_fail_records = []
+        stats["new"] = len(new_article_ids)
+        stats["skipped"] = skipped_count
 
-        for idx, (aid, row) in enumerate(by_id.items(), start=1):
+        for idx, aid in enumerate(new_article_ids, start=1):
+            row = by_id[aid]
             if job["cancelled"]:
                 yield send_message("log", level="warning", message="⚠️ 导出已被用户取消")
                 break
 
             # Update progress
-            percent = int((idx / len(by_id)) * 100)
+            percent = int((idx / len(new_article_ids)) * 100)
             yield send_message(
                 "progress",
                 current=idx,
-                total=len(by_id),
-                text=f"正在导出: {idx}/{len(by_id)} ({percent}%)",
+                total=len(new_article_ids),
+                text=f"正在导出新文章: {idx}/{len(new_article_ids)} ({percent}%)",
             )
 
             try:
@@ -245,7 +285,11 @@ def stream_export(job_id: str, config: ExportConfig) -> Generator[str, None, Non
 
             # Log every 10 articles
             if idx % 10 == 0:
-                yield send_message("log", level="info", message=f"📊 已导出 {idx}/{len(by_id)} 篇文章")
+                yield send_message("log", level="info", message=f"📊 已导出 {idx}/{len(new_article_ids)} 篇新文章")
+
+        # Merge with existing articles
+        all_articles = list(existing_articles.values()) + full_articles
+        total_articles = len(all_articles)
 
         # Save final outputs
         yield send_message("log", level="info", message="💾 正在保存导出文件...")
@@ -256,8 +300,9 @@ def stream_export(job_id: str, config: ExportConfig) -> Generator[str, None, Non
                 {
                     "exportedAt": datetime.now().isoformat(timespec="seconds"),
                     "statuses": config.statuses,
-                    "totalUnique": len(full_articles),
-                    "items": full_articles,
+                    "totalUnique": total_articles,
+                    "newArticles": len(full_articles),
+                    "items": all_articles,
                 },
                 ensure_ascii=False,
                 indent=2,
@@ -275,7 +320,7 @@ def stream_export(job_id: str, config: ExportConfig) -> Generator[str, None, Non
                 "isNeedFans", "isNeedVip", "editorType", "viewCount",
                 "diggCount", "collectCount", "commentCount",
             ])
-            for item in full_articles:
+            for item in all_articles:
                 writer.writerow([
                     item.get("articleId", ""),
                     item.get("_list_status", ""),
@@ -299,7 +344,7 @@ def stream_export(job_id: str, config: ExportConfig) -> Generator[str, None, Non
                 "articleId", "list_status", "bucket", "title",
                 "read_type", "isNeedFans", "isNeedVip", "isVipArticle", "status",
             ])
-            for item in full_articles:
+            for item in all_articles:
                 writer.writerow([
                     item.get("articleId", ""),
                     item.get("_list_status", ""),
@@ -327,28 +372,32 @@ def stream_export(job_id: str, config: ExportConfig) -> Generator[str, None, Non
         job["result"] = {
             "exportedAt": datetime.now().isoformat(timespec="seconds"),
             "statuses": config.statuses,
-            "totalUnique": len(full_articles),
+            "totalUnique": total_articles,
+            "newArticles": len(full_articles),
             "stats": stats,
             "bucketCounter": bucket_counter,
             "duration": f"{minutes}分{seconds}秒",
-            "items": full_articles,
         }
 
         # Send final report
         yield send_message("log", level="success", message="─" * 40)
         yield send_message("log", level="success", message="📊 导出报告")
         yield send_message("log", level="success", message="─" * 40)
-        yield send_message("log", level="info", message=f"   总文章数: {stats['total']}")
-        yield send_message("log", level="info", message=f"   导出成功: {stats['exported']}")
+        yield send_message("log", level="info", message=f"   远程文章数: {stats['total']}")
+        if skipped_count > 0:
+            yield send_message("log", level="info", message=f"   已有文章数: {skipped_count}")
+        yield send_message("log", level="success", message=f"   新导出文章: {len(full_articles)}")
+        yield send_message("log", level="info", message=f"   本地总计: {total_articles}")
         yield send_message("log", level="info", message=f"   图片下载: {stats['images']}")
-        yield send_message("log", level="warning", message=f"   图片失败: {stats['failed']}")
-        yield send_message("log", level="info", message=f"   富文本文章: {stats['content_from_html']}")
+        if stats['failed'] > 0:
+            yield send_message("log", level="warning", message=f"   图片失败: {stats['failed']}")
         yield send_message("log", level="info", message=f"   耗时: {minutes}分{seconds}秒")
         yield send_message("log", level="info", message="─" * 40)
-        yield send_message("log", level="info", message="📁 分类统计:")
-        for bucket, count in sorted(bucket_counter.items()):
-            yield send_message("log", level="info", message=f"   {bucket}: {count} 篇")
-        yield send_message("log", level="success", message="─" * 40)
+        if bucket_counter:
+            yield send_message("log", level="info", message="📁 新文章分类:")
+            for bucket, count in sorted(bucket_counter.items()):
+                yield send_message("log", level="info", message=f"   {bucket}: {count} 篇")
+            yield send_message("log", level="info", message="─" * 40)
         yield send_message("log", level="success", message="✅ 导出完成!")
         yield send_message("log", level="info", message=f"📂 输出目录: {config.output_dir}")
 
@@ -358,12 +407,14 @@ def stream_export(job_id: str, config: ExportConfig) -> Generator[str, None, Non
             "complete",
             data={
                 "exportedAt": job["result"]["exportedAt"],
-                "totalUnique": len(full_articles),
+                "totalUnique": total_articles,
+                "newArticles": len(full_articles),
+                "skipped": skipped_count,
                 "stats": stats,
                 "bucketCounter": bucket_counter,
                 "duration": job["result"]["duration"],
             },
-            message=f"导出完成! 共导出 {stats['exported']} 篇文章",
+            message=f"导出完成! 新增 {len(full_articles)} 篇文章",
         )
 
     except Exception as e:
