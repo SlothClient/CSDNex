@@ -1,8 +1,8 @@
-# CSDN 文章导出工具
+# CSDN 搬家工具
 
 > 通过接口逆向实现
 >
-> author: codex&claude code(glm5)&本人
+> author: copilot(codex5.3)&claude code(glm5)&本人
 
 本项目用于**通过 CSDN 已登录会话 + 网关签名**批量导出文章，支持：
 
@@ -28,7 +28,7 @@
 
 ## 2. 分类规则（以接口 JSON 字段为准）
 
-仅对“已发布”文章再细分：
+对“已发布”文章再细分：
 
 - `isNeedVip=1` 或 `read_type=read_need_vip` => `已发布/VIP可见`
 - `isNeedFans=1` 或 `read_type=read_need_fans` => `已发布/粉丝可见`
@@ -61,7 +61,7 @@ CSDN 存在两种编辑模式，部分文章会出现：
 
 ### 4.1 正文图片
 
-- 识别 Markdown 图片和 HTML `<img>`
+- 仅识别 Markdown 内容图片，忽略 HTML `<img>`
 - 下载到同名资源目录：`文章名.assets/`
 - 把链接改写为相对本地路径
 
