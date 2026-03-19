@@ -108,6 +108,70 @@
             --glow-opacity: 0;
         }
 
+        /* ---- FOREST THEME (护眼深绿色调) ---- */
+        [data-theme="forest"] {
+            --bg-primary: #1a1f1c;
+            --bg-secondary: #1e2420;
+            --bg-tertiary: #252d28;
+            --bg-card: rgba(32, 40, 35, 0.85);
+            --border: rgba(70, 85, 75, 0.4);
+            --border-hover: rgba(120, 150, 130, 0.5);
+            --text-primary: #e8e4dc;
+            --text-secondary: #a8a298;
+            --text-muted: #6b7268;
+            --accent-primary: #7da882;
+            --accent-secondary: #8fb996;
+            --accent-warning: #c9a227;
+            --accent-error: #b85c5c;
+            --accent-success: #6b9b6e;
+            --font-mono: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+            --font-display: 'Source Serif Pro', Georgia, serif;
+            --font-body: 'IBM Plex Sans', -apple-system, sans-serif;
+            --card-radius: 14px;
+            --btn-radius: 8px;
+            --input-radius: 6px;
+            --shadow-glow: 0 2px 20px rgba(0, 0, 0, 0.3);
+            --btn-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+            --progress-gradient: linear-gradient(90deg, #7da882, #a8c4aa);
+            --header-gradient: linear-gradient(135deg, #e8e4dc, #7da882);
+            --logo-gradient: linear-gradient(135deg, #7da882, #8fb996);
+            --scanline-opacity: 0;
+            --grid-opacity: 0;
+            --glow-opacity: 0;
+        }
+
+        /* ---- SEPIA THEME (温暖复古纸张色调) ---- */
+        [data-theme="sepia"] {
+            --bg-primary: #f4ecd8;
+            --bg-secondary: #faf6eb;
+            --bg-tertiary: #ebe3cf;
+            --bg-card: rgba(250, 246, 235, 0.95);
+            --border: rgba(160, 130, 100, 0.25);
+            --border-hover: rgba(140, 100, 70, 0.4);
+            --text-primary: #3d3529;
+            --text-secondary: #6b5d4d;
+            --text-muted: #9a8b78;
+            --accent-primary: #8b6914;
+            --accent-secondary: #a67c3d;
+            --accent-warning: #b8860b;
+            --accent-error: #9e4a3d;
+            --accent-success: #5d7a4a;
+            --font-mono: 'IBM Plex Mono', 'Crimson Pro', monospace;
+            --font-display: 'Playfair Display', Georgia, serif;
+            --font-body: 'Source Serif Pro', 'Noto Serif SC', Georgia, serif;
+            --card-radius: 10px;
+            --btn-radius: 6px;
+            --input-radius: 4px;
+            --shadow-glow: 0 4px 24px rgba(140, 100, 70, 0.08);
+            --btn-shadow: 0 3px 10px rgba(140, 100, 70, 0.12);
+            --progress-gradient: linear-gradient(90deg, #8b6914, #a67c3d);
+            --header-gradient: linear-gradient(135deg, #3d3529, #8b6914);
+            --logo-gradient: linear-gradient(135deg, #8b6914, #a67c3d);
+            --scanline-opacity: 0;
+            --grid-opacity: 0;
+            --glow-opacity: 0;
+        }
+
         /* ============================================
            BASE STYLES
            ============================================ */
@@ -273,6 +337,17 @@
             background: #ffffff;
             color: #000000;
             border: 2px solid #000;
+        }
+
+        .theme-btn[data-theme="forest"] {
+            background: linear-gradient(135deg, #1a1f1c, #252d28);
+            color: #7da882;
+        }
+
+        .theme-btn[data-theme="sepia"] {
+            background: linear-gradient(135deg, #f4ecd8, #ebe3cf);
+            color: #8b6914;
+            border-color: rgba(140, 100, 70, 0.3);
         }
 
         /* ============================================
@@ -814,6 +889,14 @@
         [data-theme="minimal"] .terminal-dot.yellow { background: #525252; }
         [data-theme="minimal"] .terminal-dot.green { background: #000; }
 
+        [data-theme="forest"] .terminal-dot.red { background: #b85c5c; }
+        [data-theme="forest"] .terminal-dot.yellow { background: #c9a227; }
+        [data-theme="forest"] .terminal-dot.green { background: #6b9b6e; }
+
+        [data-theme="sepia"] .terminal-dot.red { background: #9e4a3d; }
+        [data-theme="sepia"] .terminal-dot.yellow { background: #b8860b; }
+        [data-theme="sepia"] .terminal-dot.green { background: #5d7a4a; }
+
         .terminal-title {
             flex: 1;
             text-align: center;
@@ -1064,6 +1147,58 @@
             animation: none;
         }
 
+        /* Forest theme enhancements */
+        [data-theme="forest"] .btn {
+            background: linear-gradient(135deg, rgba(125, 168, 130, 0.15), rgba(143, 185, 150, 0.1));
+            border: 1px solid rgba(125, 168, 130, 0.3);
+        }
+        [data-theme="forest"] .btn:hover {
+            background: linear-gradient(135deg, rgba(125, 168, 130, 0.25), rgba(143, 185, 150, 0.2));
+            border-color: rgba(125, 168, 130, 0.5);
+        }
+        [data-theme="forest"] .card {
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-glow);
+        }
+        [data-theme="forest"] .card:hover {
+            border-color: var(--border-hover);
+            box-shadow: 0 4px 28px rgba(0, 0, 0, 0.35);
+        }
+        [data-theme="forest"] ::selection {
+            background: rgba(125, 168, 130, 0.3);
+            color: #e8e4dc;
+        }
+
+        /* Sepia theme enhancements */
+        [data-theme="sepia"] .btn {
+            background: linear-gradient(135deg, rgba(139, 105, 20, 0.1), rgba(166, 124, 61, 0.08));
+            border: 1px solid rgba(139, 105, 20, 0.25);
+        }
+        [data-theme="sepia"] .btn:hover {
+            background: linear-gradient(135deg, rgba(139, 105, 20, 0.18), rgba(166, 124, 61, 0.15));
+            border-color: rgba(139, 105, 20, 0.4);
+        }
+        [data-theme="sepia"] .card {
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-glow);
+        }
+        [data-theme="sepia"] .card:hover {
+            border-color: var(--border-hover);
+            box-shadow: 0 6px 30px rgba(140, 100, 70, 0.1);
+        }
+        [data-theme="sepia"] ::selection {
+            background: rgba(139, 105, 20, 0.25);
+            color: #3d3529;
+        }
+        [data-theme="sepia"] .terminal {
+            background: linear-gradient(180deg, #f0e6d0 0%, #ebe3cf 100%);
+            border: 1px solid rgba(160, 130, 100, 0.3);
+        }
+        [data-theme="forest"] .terminal {
+            background: linear-gradient(180deg, #1a1f1c 0%, #1e2420 100%);
+            border: 1px solid rgba(70, 85, 75, 0.3);
+        }
+
         @keyframes pulse-new {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.7; }
@@ -1235,9 +1370,11 @@
 
     <!-- Theme Switcher -->
     <div class="theme-switcher">
-        <button class="theme-btn active" data-theme="terminal" title="Terminal 主题" onclick="setTheme('terminal')">T</button>
-        <button class="theme-btn" data-theme="light" title="Light 主题" onclick="setTheme('light')">L</button>
-        <button class="theme-btn" data-theme="minimal" title="Minimal 主题" onclick="setTheme('minimal')">M</button>
+        <button class="theme-btn active" data-theme="terminal" title="Terminal 主题 (炫酷霓虹)" onclick="setTheme('terminal')">T</button>
+        <button class="theme-btn" data-theme="light" title="Light 主题 (明亮清爽)" onclick="setTheme('light')">L</button>
+        <button class="theme-btn" data-theme="minimal" title="Minimal 主题 (极简黑白)" onclick="setTheme('minimal')">M</button>
+        <button class="theme-btn" data-theme="forest" title="Forest 主题 (护眼深绿)" onclick="setTheme('forest')">F</button>
+        <button class="theme-btn" data-theme="sepia" title="Sepia 主题 (复古纸张)" onclick="setTheme('sepia')">S</button>
     </div>
 
     <div class="container">
