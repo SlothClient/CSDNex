@@ -338,6 +338,8 @@ def stream_export(job_id: str, config: ExportConfig) -> Generator[str, None, Non
         yield send_message("log", level="success", message="✅ 导出完成!")
         yield send_message("log", level="info", message=f"📂 输出目录: {config.output_dir}")
 
+        # Send complete message with summary only (NOT full article content!)
+        # The frontend already received article summaries via 'result' messages
         yield send_message(
             "complete",
             data={
@@ -346,7 +348,6 @@ def stream_export(job_id: str, config: ExportConfig) -> Generator[str, None, Non
                 "stats": stats,
                 "bucketCounter": bucket_counter,
                 "duration": job["result"]["duration"],
-                "items": full_articles,
             },
             message=f"Export completed! {stats['exported']} articles exported.",
         )

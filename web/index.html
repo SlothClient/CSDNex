@@ -1106,6 +1106,7 @@
         let isRunning = false;
         let socket = null;
         let exportData = null;
+        let articleSummaries = []; // Accumulate article summaries from 'result' messages
 
         // Update time
         function updateTime() {
@@ -1237,10 +1238,12 @@
             clearLogs();
             showProgress();
             setStatus('running', 'Exporting...');
-            addLog('Starting export...', 'info');
-            addLog(`Output: ${config.output_dir}`, 'debug');
-            addLog(`Statuses: ${config.statuses.join(', ')}`, 'debug');
-            addLog(`Page size: ${config.page_size}`, 'debug');
+            articleSummaries = []; // Reset article summaries for new export
+            document.getElementById('resultsBody').innerHTML = ''; // Clear results table
+            addLog('正在启动导出...', 'info');
+            addLog(`输出目录: ${config.output_dir}`, 'debug');
+            addLog(`状态: ${config.statuses.join(', ')}`, 'debug');
+            addLog(`每页数量: ${config.page_size}`, 'debug');
 
             try {
                 const formData = new FormData();
@@ -1284,9 +1287,9 @@
                 }
 
             } catch (error) {
-                addLog(`Error: ${error.message}`, 'error');
-                setStatus('error', 'Error');
-                showNotification('Export failed: ' + error.message, 'error');
+                addLog(`错误: ${error.message}`, 'error');
+                setStatus('error', '错误');
+                showNotification('导出失败: ' + error.message, 'error');
                 isRunning = false;
                 document.getElementById('startBtn').disabled = false;
                 document.getElementById('stopBtn').disabled = true;
@@ -1306,6 +1309,7 @@
                     updateStats(data.stats);
                     break;
                 case 'result':
+                    articleSummaries.push(data.article);
                     addResultItem(data.article);
                     break;
                 case 'complete':
@@ -1314,7 +1318,7 @@
                     document.getElementById('stopBtn').disabled = true;
                     setStatus('success', 'Completed');
                     showNotification('✅ 导出完成!', 'success');
-                    exportData = data.data;
+                    exportData = data.data; // Store for exportedAt timestamp
                     showResults(data.data);
                     // Hide progress bar after completion
                     setTimeout(() => {
@@ -1345,24 +1349,14 @@
         // Show results
         function showResults(data) {
             document.getElementById('resultsSection').style.display = 'block';
-            const tbody = document.getElementById('resultsBody');
-            tbody.innerHTML = '';
 
             // Update stats with final data if available
             if (data.stats) {
                 updateStats(data.stats);
             }
 
-            if (data.items && data.items.length > 0) {
-                // Only show first 100 items in table for performance
-                data.items.slice(0, 100).forEach(item => {
-                    addResultItem(item);
-                });
-
-                if (data.items.length > 100) {
-                    addLog(`显示前 100 篇文章，共 ${data.items.length} 篇`, 'info');
-                }
-            }
+            // Note: Results table is already populated via 'result' messages during export
+            // No need to process data.items here anymore
         }
 
         // Add result item
@@ -1402,20 +1396,30 @@
 
         // Download functions
         function downloadJSON() {
-            if (!exportData) return;
-            downloadFile('articles_full.json', JSON.stringify(exportData, null, 2), 'application/json');
+            if (articleSummaries.length === 0) {
+                showNotification('没有可下载的数据', 'error');
+                return;
+            }
+            const data = {
+                exportedAt: exportData ? exportData.exportedAt : new Date().toISOString(),
+                totalUnique: articleSummaries.length,
+                items: articleSummaries
+            };
+            downloadFile('articles_summary.json', JSON.stringify(data, null, 2), 'application/json');
         }
 
         function downloadCSV() {
-            if (!exportData || !exportData.items) return;
-
+            if (articleSummaries.length === 0) {
+                showNotification('没有可下载的数据', 'error');
+                return;
+            }
             const headers = ['articleId', 'title', '_bucket', 'viewCount', 'postTime', '_list_status'];
             const csv = [
                 headers.join(','),
-                ...exportData.items.map(item => headers.map(h => `"${(item[h] || '').toString().replace(/"/g, '""')}"`).join(','))
+                ...articleSummaries.map(item => headers.map(h => `"${(item[h] || '').toString().replace(/"/g, '""')}"`).join(','))
             ].join('\n');
 
-            downloadFile('articles.csv', csv, 'text/csv');
+            downloadFile('articles_summary.csv', csv, 'text/csv');
         }
 
         function downloadFile(filename, content, type) {
