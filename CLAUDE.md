@@ -67,15 +67,19 @@ CLI optional parameters:
 
 ### Web Interface (`web/`)
 
-- `index.html`: Single-page frontend with terminal-style UI
-  - Configuration panel (cookie, output dir, status filters, pagination)
-  - Real-time progress display with streaming logs
-  - Results table with article classification
+- `index.html`: Single-page frontend with terminal-style UI (Chinese)
+  - Configuration panel (cookie input or file upload, output dir, status filters)
+  - Real-time terminal logs with progress bar
+  - Stats dashboard (total, new, images, skipped)
+  - Results table with article classification and "新" badge for new articles
   - JSON/CSV download buttons
+  - Custom neon-themed scrollbar
 - `server.py`: Flask backend
   - `POST /api/export`: Streaming export endpoint (NDJSON response)
-  - Imports and wraps `CSDNExporter` from core script
-  - SSE-style progress updates via `stream_export()` generator
+  - `load_existing_articles()`: Loads previous export for incremental update
+  - `translate_status()`: Converts status codes to Chinese
+  - Incremental export: skips already-downloaded articles, only exports new ones
+  - Merges existing + new articles when saving
 
 ## Output Structure
 
@@ -93,6 +97,15 @@ exports/csdn_export_xxx/
     ├── 草稿/
     └── 审核/
 ```
+
+## Incremental Export
+
+On repeat exports, the tool automatically:
+1. Loads existing `articles_full.json` to get already-exported article IDs
+2. Compares with remote article list to find new articles only
+3. Skips downloading existing articles
+4. Merges existing + new when saving outputs
+5. Shows "✨ 所有内容已经都拉下来啦！" if no new articles
 
 ## Dependencies
 
