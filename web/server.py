@@ -156,15 +156,53 @@ def stream_export(job_id: str, config: ExportConfig) -> Generator[str, None, Non
             yield send_message("log", level="success", message="─" * 40)
             yield send_message("log", level="success", message="✨ 所有内容已经都拉下来啦！")
             yield send_message("log", level="success", message="─" * 40)
+
+            # Send existing articles to frontend for display
+            stats["skipped"] = skipped_count
+            stats["exported"] = 0
+            yield send_message("stats", stats=stats)
+
+            # Send all existing article summaries for results table
+            for item in existing_articles.values():
+                article_summary = {
+                    "articleId": item.get("articleId", ""),
+                    "title": str(item.get("title", "无标题"))[:100],
+                    "_list_status": item.get("_list_status", ""),
+                    "_list_status_cn": translate_status(item.get("_list_status", "")),
+                    "_bucket": item.get("_bucket", "Unknown"),
+                    "viewCount": item.get("viewCount", 0),
+                    "postTime": item.get("postTime", ""),
+                    "isNew": False,
+                }
+                yield send_message("result", article=article_summary)
+
             yield send_message("complete", data={
                 "totalUnique": len(by_id),
                 "newArticles": 0,
                 "skipped": skipped_count,
+                "stats": stats,
             }, message="无需更新")
             return
 
         yield send_message("log", level="info", message=f"🆕 需要导出 {len(new_article_ids)} 篇新文章")
-        yield send_message("log", level="info", message="🚀 开始导出...")
+
+        # Send existing articles to frontend first (for results table)
+        if existing_articles:
+            yield send_message("log", level="debug", message=f"📋 加载已有 {len(existing_articles)} 篇文章...")
+            for item in existing_articles.values():
+                article_summary = {
+                    "articleId": item.get("articleId", ""),
+                    "title": str(item.get("title", "无标题"))[:100],
+                    "_list_status": item.get("_list_status", ""),
+                    "_list_status_cn": translate_status(item.get("_list_status", "")),
+                    "_bucket": item.get("_bucket", "Unknown"),
+                    "viewCount": item.get("viewCount", 0),
+                    "postTime": item.get("postTime", ""),
+                    "isNew": False,
+                }
+                yield send_message("result", article=article_summary)
+
+        yield send_message("log", level="info", message="🚀 开始导出新文章...")
 
         # Process each NEW article only
         full_articles = []
@@ -280,6 +318,7 @@ def stream_export(job_id: str, config: ExportConfig) -> Generator[str, None, Non
                 "_bucket": bucket,
                 "viewCount": merged.get("viewCount", 0),
                 "postTime": merged.get("postTime", ""),
+                "isNew": True,
             }
             yield send_message("result", article=article_summary)
 

@@ -795,6 +795,12 @@
         .badge-vip { background: rgba(255, 71, 87, 0.2); color: var(--accent-error); }
         .badge-draft { background: rgba(139, 148, 158, 0.2); color: var(--text-secondary); }
         .badge-audit { background: rgba(139, 148, 158, 0.2); color: var(--text-secondary); }
+        .badge-new { background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color: var(--bg-primary); margin-right: 4px; animation: pulse-new 2s ease-in-out infinite; }
+
+        @keyframes pulse-new {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
 
         /* Responsive */
         @media (max-width: 1024px) {
@@ -1412,9 +1418,13 @@
                               bucket.includes('VIP') ? 'badge-vip' :
                               bucket.includes('草稿') ? 'badge-draft' : 'badge-audit';
 
+            const newBadge = item.isNew ? '<span class="badge badge-new">新</span> ' : '';
+            const titleDisplay = item.title || '无标题';
+            const titleText = titleDisplay.length > 50 ? titleDisplay.substring(0, 50) + '...' : titleDisplay;
+
             row.innerHTML = `
                 <td style="font-family: var(--font-mono); color: var(--text-muted);">${item.articleId || '-'}</td>
-                <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.title || '无标题'}</td>
+                <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${newBadge}${titleText}</td>
                 <td>${translateStatus(item._list_status)}</td>
                 <td><span class="badge ${badgeClass}">${bucket}</span></td>
                 <td>${item.viewCount || 0}</td>
