@@ -1,0 +1,7 @@
+# Web interface dependencies
+flask>=2.3.0
+werkzeug>=2.3.0
+click>=8.1.0
+
+# Core dependencies
+requests>=2.25.0

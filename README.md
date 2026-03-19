@@ -76,18 +76,40 @@ CSDN 存在两种编辑模式，部分文章会出现：
 
 ## 5. 运行方式
 
-## 5.1 环境要求
+### 5.1 环境要求
 
 - Python 3.10+
-- 依赖：`requests`
+- 依赖：`requests`（CLI）/ `flask` + `requests`（Web 界面）
 
 安装依赖：
 
 ```bash
+# CLI 模式
 pip install requests
+
+# Web 界面模式
+pip install -r web/requirements.txt
 ```
 
-## 5.2 推荐：使用 .env 注入 Cookie
+### 5.2 Web 界面（推荐）
+
+启动 Web 服务器：
+
+```bash
+cd web
+python server.py
+```
+
+然后在浏览器中打开 http://localhost:5000
+
+Web 界面特性：
+- 可视化配置面板
+- 实时导出进度
+- 导出统计展示
+- 结果表格预览
+- JSON/CSV 一键下载
+
+### 5.3 CLI 模式：使用 .env 注入 Cookie
 
 在项目根目录创建 `.env`：
 
@@ -112,7 +134,7 @@ python scripts/csdn_export_all.py \
 
 > 安全建议：不要提交 `.env` 到仓库（本项目已在 `.gitignore` 中忽略）。
 
-## 5.3 兼容方式：直接传 Cookie
+### 5.4 CLI 模式：直接传 Cookie
 
 ```bash
 python scripts/csdn_export_all.py \
@@ -120,7 +142,7 @@ python scripts/csdn_export_all.py \
   --output exports/csdn_export
 ```
 
-## 5.4 使用 Cookie 文件
+### 5.5 CLI 模式：使用 Cookie 文件
 
 ```bash
 python scripts/csdn_export_all.py \
