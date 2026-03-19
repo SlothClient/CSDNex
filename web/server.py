@@ -53,13 +53,25 @@ def stream_export(job_id: str, config: ExportConfig) -> Generator[str, None, Non
     def send_message(msg_type: str, **kwargs) -> str:
         return json.dumps({"type": msg_type, **kwargs}, ensure_ascii=False) + "\n"
 
+    def translate_status(status: str) -> str:
+        """Translate status code to Chinese."""
+        status_map = {
+            "all_v2": "已发布",
+            "all_v3": "已发布",
+            "publish": "已发布",
+            "published": "已发布",
+            "draft": "草稿箱",
+            "audit": "审核中",
+        }
+        return status_map.get(status, status)
+
     try:
         # Prepare output directory
         config.output_dir.mkdir(parents=True, exist_ok=True)
         md_dir = config.output_dir / "markdown"
         md_dir.mkdir(parents=True, exist_ok=True)
 
-        yield send_message("log", level="info", message=f"📁 Output directory: {config.output_dir}")
+        yield send_message("log", level="info", message=f"📁 输出目录: {config.output_dir}")
 
         # Setup bucket directories
         bucket_dirs = {}
@@ -86,13 +98,14 @@ def stream_export(job_id: str, config: ExportConfig) -> Generator[str, None, Non
 
         # Fetch article lists
         all_list_rows = []
-        yield send_message("log", level="info", message="🔍 Fetching article list...")
+        yield send_message("log", level="info", message="🔍 正在获取文章列表...")
 
         for status in config.statuses:
-            yield send_message("log", level="debug", message=f"   Status: {status}")
+            status_cn = translate_status(status)
+            yield send_message("log", level="debug", message=f"   状态: {status_cn}")
             rows, count_info = exporter.fetch_list_status(status)
             all_list_rows.extend(rows)
-            yield send_message("log", level="success", message=f"   ✓ Found {len(rows)} articles")
+            yield send_message("log", level="success", message=f"   ✓ 找到 {len(rows)} 篇文章")
 
         # Deduplicate by article ID
         by_id = {}
@@ -107,14 +120,14 @@ def stream_export(job_id: str, config: ExportConfig) -> Generator[str, None, Non
 
         stats["total"] = len(by_id)
         yield send_message("stats", stats=stats)
-        yield send_message("log", level="info", message=f"📝 Total unique articles: {len(by_id)}")
+        yield send_message("log", level="info", message=f"📝 共 {len(by_id)} 篇不重复文章")
 
         if len(by_id) == 0:
-            yield send_message("log", level="warning", message="⚠️ No articles found to export")
-            yield send_message("complete", data={"totalUnique": 0, "items": []}, message="Export completed with 0 articles.")
+            yield send_message("log", level="warning", message="⚠️ 没有找到可导出的文章")
+            yield send_message("complete", data={"totalUnique": 0}, message="导出完成，共 0 篇文章")
             return
 
-        yield send_message("log", level="info", message="🚀 Starting export...")
+        yield send_message("log", level="info", message="🚀 开始导出...")
 
         # Process each article
         full_articles = []
@@ -123,7 +136,7 @@ def stream_export(job_id: str, config: ExportConfig) -> Generator[str, None, Non
 
         for idx, (aid, row) in enumerate(by_id.items(), start=1):
             if job["cancelled"]:
-                yield send_message("log", level="warning", message="⚠️ Export cancelled by user")
+                yield send_message("log", level="warning", message="⚠️ 导出已被用户取消")
                 break
 
             # Update progress
@@ -138,7 +151,7 @@ def stream_export(job_id: str, config: ExportConfig) -> Generator[str, None, Non
             try:
                 detail = exporter.fetch_article_detail(aid)
             except Exception as exc:
-                yield send_message("log", level="error", message=f"❌ Failed to fetch {aid}: {exc}")
+                yield send_message("log", level="error", message=f"❌ 获取文章 {aid} 失败: {exc}")
                 detail = {"article_id": aid, "_detail_error": str(exc)}
 
             merged = {**row, **detail}
@@ -223,6 +236,7 @@ def stream_export(job_id: str, config: ExportConfig) -> Generator[str, None, Non
                 "articleId": aid,
                 "title": title_value[:100] + "..." if len(title_value) > 100 else title_value,
                 "_list_status": merged.get("_list_status", ""),
+                "_list_status_cn": translate_status(merged.get("_list_status", "")),
                 "_bucket": bucket,
                 "viewCount": merged.get("viewCount", 0),
                 "postTime": merged.get("postTime", ""),
@@ -234,7 +248,7 @@ def stream_export(job_id: str, config: ExportConfig) -> Generator[str, None, Non
                 yield send_message("log", level="info", message=f"📊 已导出 {idx}/{len(by_id)} 篇文章")
 
         # Save final outputs
-        yield send_message("log", level="info", message="💾 Saving final outputs...")
+        yield send_message("log", level="info", message="💾 正在保存导出文件...")
 
         out_json = config.output_dir / "articles_full.json"
         out_json.write_text(
@@ -328,7 +342,7 @@ def stream_export(job_id: str, config: ExportConfig) -> Generator[str, None, Non
         yield send_message("log", level="info", message=f"   导出成功: {stats['exported']}")
         yield send_message("log", level="info", message=f"   图片下载: {stats['images']}")
         yield send_message("log", level="warning", message=f"   图片失败: {stats['failed']}")
-        yield send_message("log", level="info", message=f"   HTML回退: {stats['content_from_html']}")
+        yield send_message("log", level="info", message=f"   富文本文章: {stats['content_from_html']}")
         yield send_message("log", level="info", message=f"   耗时: {minutes}分{seconds}秒")
         yield send_message("log", level="info", message="─" * 40)
         yield send_message("log", level="info", message="📁 分类统计:")
@@ -349,16 +363,16 @@ def stream_export(job_id: str, config: ExportConfig) -> Generator[str, None, Non
                 "bucketCounter": bucket_counter,
                 "duration": job["result"]["duration"],
             },
-            message=f"Export completed! {stats['exported']} articles exported.",
+            message=f"导出完成! 共导出 {stats['exported']} 篇文章",
         )
 
     except Exception as e:
         import traceback
         job["status"] = "error"
         job["error"] = str(e)
-        yield send_message("log", level="error", message=f"❌ Export failed: {e}")
+        yield send_message("log", level="error", message=f"❌ 导出失败: {e}")
         yield send_message("log", level="error", message=traceback.format_exc())
-        yield send_message("error", message=f"Export failed: {e}")
+        yield send_message("error", message=f"导出失败: {e}")
 
 
 @app.route("/")

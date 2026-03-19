@@ -967,7 +967,7 @@
                             <label class="checkbox-item active">
                                 <input type="checkbox" value="draft" checked>
                                 <span class="checkbox-mark"></span>
-                                草稿
+                                草稿箱
                             </label>
                             <label class="checkbox-item active">
                                 <input type="checkbox" value="audit" checked>
@@ -1337,6 +1337,19 @@
             }
         }
 
+        // Translate status code to Chinese
+        function translateStatus(status) {
+            const statusMap = {
+                'all_v2': '已发布',
+                'all_v3': '已发布',
+                'publish': '已发布',
+                'published': '已发布',
+                'draft': '草稿箱',
+                'audit': '审核中'
+            };
+            return statusMap[status] || status || '-';
+        }
+
         // Update stats
         function updateStats(stats) {
             document.getElementById('statsGrid').style.display = 'grid';
@@ -1373,8 +1386,8 @@
 
             row.innerHTML = `
                 <td style="font-family: var(--font-mono); color: var(--text-muted);">${item.articleId || '-'}</td>
-                <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.title || 'Untitled'}</td>
-                <td>${item._list_status || '-'}</td>
+                <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.title || '无标题'}</td>
+                <td>${translateStatus(item._list_status)}</td>
                 <td><span class="badge ${badgeClass}">${bucket}</span></td>
                 <td>${item.viewCount || 0}</td>
                 <td style="color: var(--text-muted);">${item.postTime || '-'}</td>
